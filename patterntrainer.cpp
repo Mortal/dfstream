@@ -30,13 +30,16 @@ string output(const string & from) {
 	return res;
 }
 
+// [a,b) is a range of n elements
+// each string has length m
+// Complexity: O(n² m) worst-case, O(nm log n) expected
 void build_decision_tree(oclist::iterator a,
 						 oclist::iterator b,
 						 size_t totaloccurrences,
 						 map<string, size_t> & lineids) {
-	if (a == b) cout << "Error" << endl;
+	if (a == b) cout << "Error" << '\n';
 	if (1 == b-a) {
-		cout << "return " << lineids[a->first] << "; // " << output(a->first) << endl;
+		cout << "return " << lineids[a->first] << "; // " << output(a->first) << '\n';
 		return;
 	}
 	size_t linelength = a->first.size();
@@ -64,14 +67,15 @@ void build_decision_tree(oclist::iterator a,
 		unset += c->second;
 		++c;
 	}
-	cout << "if (!input[" << bestindex << "]) {\n// " << unset << " out of " << totaloccurrences << endl;
+	cout << "if (!input[" << bestindex << "]) {\n// " << unset << " out of " << totaloccurrences << '\n';
 	build_decision_tree(a, c, unset, lineids);
-	cout << "} else {\n// " << (totaloccurrences-unset) << " out of " << totaloccurrences << endl;
+	cout << "} else {\n// " << (totaloccurrences-unset) << " out of " << totaloccurrences << '\n';
 	build_decision_tree(c, b, totaloccurrences-unset, lineids);
-	cout << "}" << endl;
+	cout << "}" << '\n';
 }
 
-int main() {
+template <bool fast>
+void go() {
 	string line;
 	map<string, size_t> lineoccurrences;
 	map<string, size_t> lineids;
@@ -80,41 +84,37 @@ int main() {
 	vector<size_t> isone;
 	vector<size_t> iszero;
 	while (getline(cin, line)) {
-		bool allones = true;
-		bool allzeroes = true;
 		for (size_t i = 0; i < line.size(); ++i) {
 			if (line[i] == '0') {
-				allones = false;
 				line[i] = 0;
 			} else {
-				allzeroes = false;
 				line[i] = 1;
 			}
 		}
-		size_t id = lineids.insert(make_pair(line, totaloccurrences)).first->second;
-		if (allones) cerr << "Line " << id << " is all ones" << endl;
-		if (allzeroes) cerr << "Line " << id << " is all zeroes" << endl;
-		if (!id) {
-			linelength = line.size();
-			isone.resize(linelength);
-			iszero.resize(linelength);
-		} else if (line.size() != linelength) {
-			cerr << "Length mismatch: Expected " << linelength << ", got " << line.size() << ", exiting" << endl;
-			return 1;
-		}
-		for (size_t i = 0; i < line.size(); ++i) {
-			if (line[i]) ++isone[i];
-			else ++iszero[i];
+		lineids.insert(make_pair(line, totaloccurrences));
+		if (!fast) {
+			if (!totaloccurrences) {
+				linelength = line.size();
+				isone.resize(linelength);
+				iszero.resize(linelength);
+			} else if (line.size() != linelength) {
+				cerr << "Length mismatch: Expected " << linelength << ", got " << line.size() << ", exiting" << endl;
+				return;
+			}
+			for (size_t i = 0; i < line.size(); ++i) {
+				if (line[i]) ++isone[i];
+				else ++iszero[i];
+			}
 		}
 		++(lineoccurrences.insert(make_pair(line, 0)).first->second);
 		++totaloccurrences;
 	}
 	if (!totaloccurrences) {
 		cerr << "No input" << endl;
-		return 1;
+		return;
 	}
 
-	{
+	if (!fast) {
 		size_t least = -1;
 		size_t pos = 0;
 		cerr << "The following positions are all one: ";
@@ -126,7 +126,7 @@ int main() {
 		cerr << endl;
 	}
 
-	{
+	if (!fast) {
 		size_t least = -1;
 		size_t pos = 0;
 		cerr << "The following positions are all zero: ";
@@ -141,7 +141,17 @@ int main() {
 	oclist lineoccurrences_vec(lineoccurrences.begin(), lineoccurrences.end());
 
 	build_decision_tree(lineoccurrences_vec.begin(), lineoccurrences_vec.end(), totaloccurrences, lineids);
+}
 
+int main(int argc, char ** argv) {
+	if (argc > 1 && string(argv[1]) != "fast") {
+		cout << "Usage: " << argv[0] << " [fast]" << endl;
+		return 0;
+	} else if (argc > 1) {
+		go<true>();
+	} else {
+		go<false>();
+	}
 	return 0;
 }
 // vim:set ts=4 sts=4 sw=4:
