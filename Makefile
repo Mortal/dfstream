@@ -1,3 +1,3 @@
 CXX=clang++
-CXXFLAGS=-g -Wall -Wextra -std=c++0x
-all: patterntrainer
+CXXFLAGS=-O3 -Wall -Wextra -std=c++0x
+all: patterntrainer compressor uncompress
