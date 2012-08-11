@@ -70,7 +70,7 @@ bool readpixels(const int width, const int height) {
 	static std::vector<tiledata<pixel> > output;
 	output.resize(symbolcolumns);
 	if (first) {
-		printf("%d\n", symbolcolumns);
+		printf("%d\n%d\n", symbolcolumns, symbolrows);
 		first = false;
 	}
 	for (int y = 0; y < symbolrows; ++y) {
