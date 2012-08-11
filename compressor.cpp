@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <utility>
 #include <array>
+#include <vector>
 
 const int symbolwidth = 8; // pixel width of single symbol; must be a power of two
 const int symbolheight = 12;
@@ -51,21 +52,37 @@ bool readframe() {
 	return false;
 }
 
+template <typename pixel>
+struct tiledata {
+	unsigned char tile;
+};
+
+bool first = true;
+
 template <int pixelsize>
 bool readpixels(const int width, const int height) {
 	typedef std::array<char, pixelsize> pixel;
 	const int symbolcolumns = width/symbolwidth;
 	const int symbolrows = height/symbolheight;
 	const int bufsize = width*symbolheight;
-	pixel * symbolrow = new pixel[bufsize];
+	static std::vector<pixel> symbolrow;
+	symbolrow.resize(bufsize);
+	static std::vector<tiledata<pixel> > output;
+	output.resize(symbolcolumns);
+	if (first) {
+		printf("%d\n", symbolcolumns);
+		first = false;
+	}
 	for (int y = 0; y < symbolrows; ++y) {
-		fread(symbolrow, sizeof(pixel), bufsize, stdin);
-		for (pixel * buf = symbolrow; buf != (symbolrow+width); buf += symbolwidth) {
-			deinterlacer<pixel> d(buf, symbolcolumns);
+		fread(&symbolrow[0], sizeof(pixel), bufsize, stdin);
+		auto buf = symbolrow.begin();
+		for (int x = 0; x < symbolcolumns; ++x) {
+			deinterlacer<pixel> d(&*buf, symbolcolumns);
 			auto c = binarydecode(d);
-			//pixel fg = d.getcol(c.first);
-			putchar(c.second);
+			output[x].tile = c.second;
+			buf += symbolwidth;
 		}
+		fwrite(&output[0], sizeof(tiledata<pixel>), symbolcolumns, stdout);
 	}
 	return 1;
 }
