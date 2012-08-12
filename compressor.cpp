@@ -6,7 +6,27 @@
 
 const int symbolwidth = 8; // pixel width of single symbol; must be a power of two
 const int symbolheight = 12;
-const int indexoffsetmask = symbolwidth-1;
+
+struct pixmap_header {
+	int format, width, height, maxval;
+	bool good;
+
+	static pixmap_header read() {
+		pixmap_header res;
+		res.good = false;
+		if (4 != fscanf(stdin, "P%d %d %d %d\n", &res.format, &res.width, &res.height, &res.maxval)) {
+			if (feof(stdin)) return res;
+			printf("Couldn't read header\n");
+			return res;
+		}
+		if (res.maxval > 255) {
+			printf("Maxval too large: %d\n", res.maxval);
+			return res;
+		}
+		res.good = true;
+		return res;
+	}
+};
 
 template <typename pixel>
 struct deinterlacer {
@@ -19,6 +39,7 @@ struct deinterlacer {
 	}
 
 	inline pixel getcol(const size_t i) const {
+		const int indexoffsetmask = symbolwidth-1; // assume symbolwidth is a power of two
 		return offset[(i & ~indexoffsetmask)*symbolcolumns + (i & indexoffsetmask)];
 	}
 
@@ -36,19 +57,11 @@ template <int pixelsize>
 bool readpixels(const int width, const int height);
 
 bool readframe() {
-	int format, width, height, maxval;
-	if (4 != fscanf(stdin, "P%d %d %d %d\n", &format, &width, &height, &maxval)) {
-		if (feof(stdin)) return false;
-		printf("Couldn't read header\n");
-		return false;
-	}
-	if (maxval > 255) {
-		printf("Maxval too large: %d\n", maxval);
-		return false;
-	}
-	if (format == 5) return readpixels<1>(width, height);
-	if (format == 6) return readpixels<3>(width, height);
-	printf("Unknown format %d\n", format);
+	pixmap_header h = pixmap_header::read();
+	if (!h.good) return false;
+	if (h.format == 5) return readpixels<1>(h.width, h.height);
+	if (h.format == 6) return readpixels<3>(h.width, h.height);
+	printf("Unknown format %d\n", h.format);
 	return false;
 }
 
