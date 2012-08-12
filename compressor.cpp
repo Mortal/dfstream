@@ -10,12 +10,31 @@ const int symbolheight = 12;
 struct pixmap_header {
 	int format, width, height, maxval;
 	bool good;
+	bool eof;
+
+	pixmap_header() : good(false), eof(false) {}
+
+	bool operator==(const pixmap_header & other) const {
+		if (eof != other.eof) return false;
+		if (good != other.good) return false;
+		if (!good) return true;
+		return format == other.format
+			&& width == other.width
+			&& height == other.height
+			&& maxval == other.maxval;
+	}
+
+	bool operator!=(const pixmap_header & other) const {
+		return *this != other;
+	}
 
 	static pixmap_header read() {
 		pixmap_header res;
-		res.good = false;
 		if (4 != fscanf(stdin, "P%d %d %d %d\n", &res.format, &res.width, &res.height, &res.maxval)) {
-			if (feof(stdin)) return res;
+			if (feof(stdin)) {
+				res.eof = true;
+				return res;
+			}
 			printf("Couldn't read header\n");
 			return res;
 		}
@@ -56,13 +75,17 @@ std::pair<unsigned char, unsigned char> binarydecode(const deinterlacer<pixel> &
 template <int pixelsize>
 bool readpixels(const int width, const int height);
 
-bool readframe() {
-	pixmap_header h = pixmap_header::read();
-	if (!h.good) return false;
-	if (h.format == 5) return readpixels<1>(h.width, h.height);
-	if (h.format == 6) return readpixels<3>(h.width, h.height);
-	printf("Unknown format %d\n", h.format);
-	return false;
+template <int pixelsize>
+bool readframes(const pixmap_header & reference) {
+	for (bool first = true;; first = false) {
+		if (!first) {
+			pixmap_header h = pixmap_header::read();
+			if (h.eof) return true;
+			if (h != reference) return false;
+		}
+		if (!readpixels<pixelsize>(reference.width, reference.height)) break;
+	}
+	return true;
 }
 
 template <typename pixel>
@@ -101,7 +124,11 @@ bool readpixels(const int width, const int height) {
 }
 
 int main() {
-	while (readframe());
-	return 0;
+	pixmap_header h = pixmap_header::read();
+	if (!h.good) return false;
+	if (h.format == 5) return readframes<1>(h) ? 0 : 1;
+	if (h.format == 6) return readframes<3>(h) ? 0 : 1;
+	printf("Unknown format %d\n", h.format);
+	return 1;
 }
 // vim:set ts=4 sts=4 sw=4 noet:
