@@ -77,6 +77,9 @@ bool readpixels(const int width, const int height);
 
 template <int pixelsize>
 bool readframes(const pixmap_header & reference) {
+	const int symbolcolumns = reference.width/symbolwidth;
+	const int symbolrows = reference.height/symbolheight;
+	printf("%d\n%d\n", symbolcolumns, symbolrows);
 	for (bool first = true;; first = false) {
 		if (!first) {
 			pixmap_header h = pixmap_header::read();
@@ -93,8 +96,6 @@ struct tiledata {
 	unsigned char tile;
 };
 
-bool first = true;
-
 template <int pixelsize>
 bool readpixels(const int width, const int height) {
 	typedef std::array<char, pixelsize> pixel;
@@ -105,10 +106,6 @@ bool readpixels(const int width, const int height) {
 	symbolrow.resize(bufsize);
 	static std::vector<tiledata<pixel> > output;
 	output.resize(symbolcolumns);
-	if (first) {
-		printf("%d\n%d\n", symbolcolumns, symbolrows);
-		first = false;
-	}
 	for (int y = 0; y < symbolrows; ++y) {
 		fread(&symbolrow[0], sizeof(pixel), bufsize, stdin);
 		auto buf = symbolrow.begin();
