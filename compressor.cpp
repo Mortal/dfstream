@@ -14,6 +14,9 @@ struct pixmap_header {
 
 	pixmap_header() : good(false), eof(false) {}
 
+	int symbolrows() const { return height/symbolheight; }
+	int symbolcolumns() const { return width/symbolwidth; }
+
 	bool operator==(const pixmap_header & other) const {
 		if (eof != other.eof) return false;
 		if (good != other.good) return false;
@@ -77,25 +80,42 @@ struct tiledata {
 	unsigned char tile;
 };
 
+template <typename pixel>
+struct stdout_writer {
+	pixmap_header header;
+
+	stdout_writer(const pixmap_header & header)
+		: header(header)
+	{
+		printf("%d\n%d\n", header.symbolcolumns(), header.symbolrows());
+	}
+
+	void write_row(const std::vector<tiledata<pixel> > & output) {
+		fwrite(&output[0], sizeof(tiledata<pixel>), header.symbolcolumns(), stdout);
+	}
+};
+
 template <int pixelsize>
 struct stdin_reader {
+	typedef std::array<char, pixelsize> pixel;
 	pixmap_header header;
 	const int width;
 	const int height;
 	const int symbolcolumns;
 	const int symbolrows;
+	stdout_writer<pixel> writer;
 
-	stdin_reader(const pixmap_header & reference)
-		: header(reference)
+	stdin_reader(const pixmap_header & header)
+		: header(header)
 		, width(header.width)
 		, height(header.height)
 		, symbolcolumns(width/symbolwidth)
 		, symbolrows(height/symbolheight)
+		, writer(header)
 	{
 	}
 
 bool readframes() {
-	printf("%d\n%d\n", symbolcolumns, symbolrows);
 	for (bool first = true;; first = false) {
 		if (!first) {
 			pixmap_header h = pixmap_header::read();
@@ -108,7 +128,6 @@ bool readframes() {
 }
 
 bool readpixels() {
-	typedef std::array<char, pixelsize> pixel;
 	const int symbolcolumns = width/symbolwidth;
 	const int symbolrows = height/symbolheight;
 	const int bufsize = width*symbolheight;
@@ -125,7 +144,7 @@ bool readpixels() {
 			output[x].tile = c.second;
 			buf += symbolwidth;
 		}
-		fwrite(&output[0], sizeof(tiledata<pixel>), symbolcolumns, stdout);
+		writer.write_row(output);
 	}
 	return 1;
 }
