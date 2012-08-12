@@ -1,11 +1,38 @@
 #include <cstring>
 #include <cstdio>
 #include <utility>
-#include <array>
 #include <vector>
 
 const int symbolwidth = 8; // pixel width of single symbol; must be a power of two
 const int symbolheight = 12;
+
+template <typename T, int I, int N>
+struct dataequal;
+
+template <typename T, int N>
+struct dataequal<T, 0, N> {
+	inline static bool eq(const T *, const T *) {
+		return true;
+	}
+};
+
+template <typename T, int I, int N>
+struct dataequal {
+	inline static bool eq(const T * a, const T * b) {
+		return a[N-I] == b[N-I] && dataequal<T, I-1, N>::eq(a, b);
+	}
+};
+
+template <int pixelsize>
+struct pixel_type {
+	unsigned char data[pixelsize];
+	inline bool operator==(const pixel_type & other) const {
+		return dataequal<unsigned char, pixelsize, pixelsize>::eq(data, other.data);
+	}
+	inline bool operator!=(const pixel_type & other) const {
+		return !(*this == other);
+	}
+};
 
 struct pixmap_header {
 	int format, width, height, maxval;
@@ -28,7 +55,7 @@ struct pixmap_header {
 	}
 
 	bool operator!=(const pixmap_header & other) const {
-		return *this != other;
+		return !(*this == other);
 	}
 
 	static pixmap_header read() {
@@ -108,7 +135,7 @@ struct stdout_writer {
 
 template <int pixelsize>
 struct stdin_reader {
-	typedef std::array<char, pixelsize> pixel;
+	typedef pixel_type<pixelsize> pixel;
 	pixmap_header header;
 	const int width;
 	const int height;
