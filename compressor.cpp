@@ -72,32 +72,42 @@ std::pair<unsigned char, unsigned char> binarydecode(const deinterlacer<pixel> &
 #include "binary_decider.inl"
 }
 
-template <int pixelsize>
-bool readpixels(const int width, const int height);
-
-template <int pixelsize>
-bool readframes(const pixmap_header & reference) {
-	const int symbolcolumns = reference.width/symbolwidth;
-	const int symbolrows = reference.height/symbolheight;
-	printf("%d\n%d\n", symbolcolumns, symbolrows);
-	for (bool first = true;; first = false) {
-		if (!first) {
-			pixmap_header h = pixmap_header::read();
-			if (h.eof) return true;
-			if (h != reference) return false;
-		}
-		if (!readpixels<pixelsize>(reference.width, reference.height)) break;
-	}
-	return true;
-}
-
 template <typename pixel>
 struct tiledata {
 	unsigned char tile;
 };
 
 template <int pixelsize>
-bool readpixels(const int width, const int height) {
+struct stdin_reader {
+	pixmap_header header;
+	const int width;
+	const int height;
+	const int symbolcolumns;
+	const int symbolrows;
+
+	stdin_reader(const pixmap_header & reference)
+		: header(reference)
+		, width(header.width)
+		, height(header.height)
+		, symbolcolumns(width/symbolwidth)
+		, symbolrows(height/symbolheight)
+	{
+	}
+
+bool readframes() {
+	printf("%d\n%d\n", symbolcolumns, symbolrows);
+	for (bool first = true;; first = false) {
+		if (!first) {
+			pixmap_header h = pixmap_header::read();
+			if (h.eof) return true;
+			if (h != header) return false;
+		}
+		if (!readpixels()) break;
+	}
+	return true;
+}
+
+bool readpixels() {
 	typedef std::array<char, pixelsize> pixel;
 	const int symbolcolumns = width/symbolwidth;
 	const int symbolrows = height/symbolheight;
@@ -118,6 +128,14 @@ bool readpixels(const int width, const int height) {
 		fwrite(&output[0], sizeof(tiledata<pixel>), symbolcolumns, stdout);
 	}
 	return 1;
+}
+
+};
+
+template <int pixelsize>
+bool readframes(pixmap_header & h) {
+	stdin_reader<pixelsize> r(h);
+	return r.readframes();
 }
 
 int main() {
