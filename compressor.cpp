@@ -83,6 +83,8 @@ struct tiledata {
 template <typename pixel>
 struct stdout_writer {
 	pixmap_header header;
+	std::vector<tiledata<pixel> > output;
+	typename std::vector<tiledata<pixel> >::iterator i;
 
 	stdout_writer(const pixmap_header & header)
 		: header(header)
@@ -90,8 +92,17 @@ struct stdout_writer {
 		printf("%d\n%d\n", header.symbolcolumns(), header.symbolrows());
 	}
 
-	void write_row(const std::vector<tiledata<pixel> > & output) {
-		fwrite(&output[0], sizeof(tiledata<pixel>), header.symbolcolumns(), stdout);
+	void begin_frame() {
+		output.resize(header.symbolcolumns() * header.symbolrows());
+		i = output.begin();
+	}
+
+	void write_row(const std::vector<tiledata<pixel> > & row) {
+		i = std::copy(row.begin(), row.end(), i);
+	}
+
+	void end_frame() {
+		fwrite(&output[0], sizeof(tiledata<pixel>), output.size(), stdout);
 	}
 };
 
@@ -135,6 +146,7 @@ bool readpixels() {
 	symbolrow.resize(bufsize);
 	static std::vector<tiledata<pixel> > output;
 	output.resize(symbolcolumns);
+	writer.begin_frame();
 	for (int y = 0; y < symbolrows; ++y) {
 		fread(&symbolrow[0], sizeof(pixel), bufsize, stdin);
 		auto buf = symbolrow.begin();
@@ -146,6 +158,7 @@ bool readpixels() {
 		}
 		writer.write_row(output);
 	}
+	writer.end_frame();
 	return 1;
 }
 
