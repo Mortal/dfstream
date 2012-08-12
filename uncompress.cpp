@@ -6,29 +6,16 @@
 #include <unistd.h>
 
 int main(int argc, char ** argv) {
-	if (argc < 4) {
-		printf("Usage: %s width height skip\n", argv[0]);
-		return 1;
-	}
-
 	int width;
 	int height;
-	int skip;
-	if (!strcmp(argv[1], "auto")) {
-		scanf("%d\n", &width);
-	} else {
-		width = atoi(argv[1]);
-	}
-	if (!strcmp(argv[2], "auto")) {
-		scanf("%d\n", &height);
-	} else {
-		height = atoi(argv[2]);
-	}
-	skip = atoi(argv[3]);
+	int skip = 0;
+	scanf("%d\n", &width);
+	scanf("%d\n", &height);
+	if (argc >= 2) skip = atoi(argv[1]);
 
 	int left = width;
 	int linesleft = height;
-	int skipleft = skip;
+	int skipleft = 0;
 	std::stringstream outbuf;
 	while (1) {
 		int r = getc(stdin);
