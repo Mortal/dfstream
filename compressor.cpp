@@ -114,6 +114,7 @@ struct stdout_writer {
 
 	void end_frame() {
 		fwrite(&output[0], sizeof(tiledata<pixel>), output.size(), stdout);
+		fflush(stdout);
 	}
 };
 
