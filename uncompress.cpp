@@ -81,7 +81,7 @@ int main(int argc, char ** argv) {
 			int idx = 0;
 			for (int r = 0; r < canvasheight; ++r) {
 				for (int c = 0; c < canvaswidth; ++c) {
-					outbuf << cp437[idx++];
+					outbuf << cp437[frame[idx++]];
 				}
 				outbuf << '\n';
 			}
