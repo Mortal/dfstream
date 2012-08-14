@@ -86,21 +86,15 @@ std::pair<unsigned char, unsigned char> binarydecode(const deinterlacer<pixel> &
 #include "binary_decider.inl"
 }
 
-template <typename pixel>
-struct tiledata {
-	unsigned char tile;
-};
-
-template <typename pixel>
 struct stdout_writer {
+	typedef unsigned char tile_type;
 	pixmap_header header;
-	std::vector<tiledata<pixel> > output;
-	typename std::vector<tiledata<pixel> >::iterator i;
+	std::vector<tile_type> output;
+	typename std::vector<tile_type>::iterator i;
 
 	stdout_writer(const pixmap_header & header)
 		: header(header)
 	{
-		printf("%d\n%d\n", header.symbolcolumns(), header.symbolrows());
 	}
 
 	void begin_frame() {
@@ -108,12 +102,22 @@ struct stdout_writer {
 		i = output.begin();
 	}
 
-	void write_row(const std::vector<tiledata<pixel> > & row) {
+	void write_row(const std::vector<tile_type> & row) {
 		i = std::copy(row.begin(), row.end(), i);
 	}
 
 	void end_frame() {
-		fwrite(&output[0], sizeof(tiledata<pixel>), output.size(), stdout);
+		const int canvaswidth = header.symbolcolumns();
+		const int canvasheight = header.symbolrows();
+		const int outputcol = 0;
+		const int outputrow = 0;
+		const int outputwidth = canvaswidth;
+		const int outputheight = canvasheight;
+		printf("%d %d %d %d %d %d\n",
+			   canvaswidth, canvasheight,
+			   outputcol, outputrow,
+			   outputwidth, outputheight);
+		fwrite(&output[0], sizeof(tile_type), outputwidth*outputheight, stdout);
 		fflush(stdout);
 	}
 };
@@ -121,12 +125,13 @@ struct stdout_writer {
 template <int pixelsize>
 struct stdin_reader {
 	typedef pixel_type<pixelsize> pixel;
+	typedef stdout_writer::tile_type tile_type;
 	pixmap_header header;
 	const int width;
 	const int height;
 	const int symbolcolumns;
 	const int symbolrows;
-	stdout_writer<pixel> writer;
+	stdout_writer writer;
 
 	stdin_reader(const pixmap_header & header)
 		: header(header)
@@ -156,7 +161,7 @@ bool readpixels() {
 	const int bufsize = width*symbolheight;
 	static std::vector<pixel> symbolrow;
 	symbolrow.resize(bufsize);
-	static std::vector<tiledata<pixel> > output;
+	static std::vector<tile_type> output;
 	output.resize(symbolcolumns);
 	writer.begin_frame();
 	for (int y = 0; y < symbolrows; ++y) {
@@ -165,7 +170,7 @@ bool readpixels() {
 		for (int x = 0; x < symbolcolumns; ++x) {
 			deinterlacer<pixel> d(&*buf, symbolcolumns);
 			auto c = binarydecode(d);
-			output[x].tile = c.second;
+			output[x] = c.second;
 			buf += symbolwidth;
 		}
 		writer.write_row(output);
