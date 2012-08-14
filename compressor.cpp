@@ -89,6 +89,7 @@ std::pair<unsigned char, unsigned char> binarydecode(const deinterlacer<pixel> &
 struct stdout_writer {
 	typedef unsigned char tile_type;
 	pixmap_header header;
+	std::vector<tile_type> prev_output;
 	std::vector<tile_type> output;
 	typename std::vector<tile_type>::iterator i;
 
@@ -109,16 +110,53 @@ struct stdout_writer {
 	void end_frame() {
 		const int canvaswidth = header.symbolcolumns();
 		const int canvasheight = header.symbolrows();
-		const int outputcol = 0;
-		const int outputrow = 0;
-		const int outputwidth = canvaswidth;
-		const int outputheight = canvasheight;
+
+		int x1, y1, x2, y2;
+		if (prev_output.size() != output.size()) {
+			x1 = y1 = 0;
+			x2 = canvaswidth;
+			y2 = canvasheight;
+		} else {
+			int idx = 0;
+			x2 = y2 = 0;
+			x1 = canvaswidth;
+			y1 = canvasheight;
+			for (int r = 0; r < canvasheight; ++r) {
+				for (int c = 0; c < canvaswidth; ++c) {
+					if (prev_output[idx] != output[idx]) {
+						if (x1 > c) x1 = c;
+						if (y1 > r) y1 = r;
+						if (x2 <= c) x2 = c+1;
+						if (y2 <= r) y2 = r+1;
+					}
+					++idx;
+				}
+			}
+		}
+		if (x1 >= x2 || y1 >= y2) {
+			printf("%d %d 0 0 0 0\n", canvaswidth, canvasheight);
+			std::swap(prev_output, output);
+			return;
+		}
+		const int outputcol = x1;
+		const int outputrow = y1;
+		const int outputwidth = x2-x1;
+		const int outputheight = y2-y1;
 		printf("%d %d %d %d %d %d\n",
 			   canvaswidth, canvasheight,
 			   outputcol, outputrow,
 			   outputwidth, outputheight);
-		fwrite(&output[0], sizeof(tile_type), outputwidth*outputheight, stdout);
+		if (outputcol == 0 && outputwidth == canvaswidth) {
+			fwrite(&output[outputrow*canvaswidth], sizeof(tile_type), outputheight*canvaswidth, stdout);
+		} else {
+			int idx = canvaswidth * outputrow + outputcol;
+			for (int r = 0; r < outputheight; ++r) {
+				fwrite(&output[idx], sizeof(tile_type), outputwidth, stdout);
+				idx += canvaswidth;
+			}
+		}
 		fflush(stdout);
+		std::swap(prev_output, output);
 	}
 };
 
