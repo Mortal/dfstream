@@ -86,16 +86,15 @@ int main(int argc, char ** argv) {
 		if (!skipleft--) {
 			skipleft = skip;
 			std::wstringstream outbuf;
-			int idx = 0;
-			for (int r = 0; r < canvasheight; ++r) {
-				for (int c = 0; c < canvaswidth; ++c) {
-					outbuf << cp437[frame[idx++]];
+			int idx = canvaswidth*outputrow + outputcol;
+			for (int r = 0; r < outputheight; ++r) {
+				for (int c = 0; c < outputwidth; ++c) {
+					outbuf << cp437[frame[idx + c]];
 				}
-				outbuf << L'\n';
+				idx += canvaswidth;
 			}
 			std::wstring out = outbuf.str();
-			sc.setbuf(out);
-			outbuf.str(L"");
+			sc.setbuf(out, outputrow, outputcol, outputwidth, outputheight);
 		}
 	}
 	return 0;
