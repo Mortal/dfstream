@@ -54,26 +54,32 @@ int main(int argc, char ** argv) {
 	int prevwidth = 0;
 	int prevheight = 0;
 	while (readheader()) {
+		ensure(canvaswidth, 0, 4096);
+		ensure(canvasheight, 0, 4096);
 		if (prevwidth != canvaswidth || prevheight != canvasheight) {
 			frame.clear();
 			frame.resize(canvaswidth*canvasheight);
 			prevwidth = canvaswidth;
 			prevheight = canvasheight;
-			ensure(canvaswidth, 0, 4096);
-			ensure(canvasheight, 0, 4096);
 		}
 		ensure(outputcol, 0, canvaswidth);
 		ensure(outputrow, 0, canvasheight);
 		ensure(outputwidth, 0, canvaswidth-outputcol);
 		ensure(outputheight, 0, canvasheight-outputrow);
+
+		std::vector<unsigned char> input(canvaswidth*canvasheight);
+		std::cin.read(reinterpret_cast<char*>(&input[0]), outputheight*outputwidth);
+
 		if (outputwidth == 0 || outputheight == 0) {
 			// do nothing!
 		} else if (outputcol == 0 && outputwidth == canvaswidth) {
-			std::cin.read(reinterpret_cast<char*>(&frame[outputrow*canvaswidth]), outputheight*canvaswidth);
+			std::copy(input.begin(), input.end(), frame.begin()+(outputrow*canvaswidth));
 		} else {
+			int inputidx = 0;
 			int idx = canvaswidth * outputrow + outputcol;
 			for (int r = 0; r < outputheight; ++r) {
-				std::cin.read(reinterpret_cast<char*>(&frame[idx]), outputwidth);
+				std::copy(input.begin()+inputidx, input.begin()+(inputidx+outputwidth), frame.begin()+idx);
+				inputidx += outputwidth;
 				idx += canvaswidth;
 			}
 		}
