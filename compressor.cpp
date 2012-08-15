@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <utility>
 #include <vector>
+#include "types.h"
 #include "dataequal.h"
 
 const int symbolwidth = 8; // pixel width of single symbol; must be a power of two
@@ -16,6 +17,7 @@ struct pixel_type {
 	inline bool operator!=(const pixel_type & other) const {
 		return !(*this == other);
 	}
+	inline unsigned char operator[](size_t i) const { return data[i]; }
 };
 
 struct pixmap_header {
@@ -87,7 +89,6 @@ std::pair<unsigned char, unsigned char> binarydecode(const deinterlacer<pixel> &
 }
 
 struct stdout_writer {
-	typedef unsigned char tile_type;
 	pixmap_header header;
 	std::vector<tile_type> prev_output;
 	std::vector<tile_type> output;
@@ -163,7 +164,6 @@ struct stdout_writer {
 template <int pixelsize>
 struct stdin_reader {
 	typedef pixel_type<pixelsize> pixel;
-	typedef stdout_writer::tile_type tile_type;
 	pixmap_header header;
 	const int width;
 	const int height;
@@ -193,6 +193,9 @@ bool readframes() {
 	return true;
 }
 
+inline color_type decode_bg_color(const pixel &);
+inline color_type decode_fg_color(const pixel &);
+
 bool readpixels() {
 	const int symbolcolumns = width/symbolwidth;
 	const int symbolrows = height/symbolheight;
@@ -208,7 +211,7 @@ bool readpixels() {
 		for (int x = 0; x < symbolcolumns; ++x) {
 			deinterlacer<pixel> d(&*buf, symbolcolumns);
 			auto c = binarydecode(d);
-			output[x] = c.second;
+			output[x] = tile_type(c.second, decode_bg_color(d.getcol(7)) | decode_fg_color(d.getcol(c.first)));
 			buf += symbolwidth;
 		}
 		writer.write_row(output);
@@ -218,6 +221,38 @@ bool readpixels() {
 }
 
 };
+
+template <>
+color_type stdin_reader<1>::decode_bg_color(const pixel_type<1> &) {
+	return 0;
+}
+
+template <>
+color_type stdin_reader<1>::decode_fg_color(const pixel_type<1> &) {
+	return 15;
+}
+
+template <>
+color_type stdin_reader<3>::decode_bg_color(const pixel_type<3> & c) {
+	if (!c[0] && !c[1] && !c[2]) return 0; // black
+	if (c[0] == c[1] && c[1] == c[2]) return 0x70; // gray
+	color_type l = (c[0] == 255 || c[1] == 255 || c[2] == 255) ? 0x80 : 0;
+	color_type b = c[2] ? 0x40 : 0;
+	color_type g = c[1] ? 0x20 : 0;
+	color_type r = c[0] ? 0x10 : 0;
+	return l|b|g|r;
+}
+
+template <>
+color_type stdin_reader<3>::decode_fg_color(const pixel_type<3> & c) {
+	if (!c[0] && !c[1] && !c[2]) return 0; // black
+	if (c[0] == c[1] && c[1] == c[2]) return 7+(c[0]<=128); // gray
+	color_type l = (c[0] == 255 || c[1] == 255 || c[2] == 255) ? 0x8 : 0;
+	color_type b = c[2] ? 4 : 0;
+	color_type g = c[1] ? 2 : 0;
+	color_type r = c[0] ? 1 : 0;
+	return l|b|g|r;
+}
 
 template <int pixelsize>
 bool readframes(pixmap_header & h) {

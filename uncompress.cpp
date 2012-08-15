@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include "ncurses.h"
+#include "types.h"
 
 int canvaswidth;
 int canvasheight;
@@ -50,7 +51,7 @@ int main(int argc, char ** argv) {
 	if (argc >= 2) skip = atoi(argv[1]);
 
 	int skipleft = 0;
-	std::vector<unsigned char> frame;
+	std::vector<tile_type> frame;
 	int prevwidth = 0;
 	int prevheight = 0;
 	while (readheader()) {
@@ -67,8 +68,8 @@ int main(int argc, char ** argv) {
 		ensure(outputwidth, 0, canvaswidth-outputcol);
 		ensure(outputheight, 0, canvasheight-outputrow);
 
-		std::vector<unsigned char> input(canvaswidth*canvasheight);
-		std::cin.read(reinterpret_cast<char*>(&input[0]), outputheight*outputwidth);
+		std::vector<tile_type> input(canvaswidth*canvasheight);
+		std::cin.read(reinterpret_cast<char*>(&input[0]), sizeof(tile_type)*outputheight*outputwidth);
 
 		if (outputwidth == 0 || outputheight == 0) {
 			// do nothing!
@@ -89,12 +90,12 @@ int main(int argc, char ** argv) {
 			int idx = canvaswidth*outputrow + outputcol;
 			for (int r = 0; r < outputheight; ++r) {
 				for (int c = 0; c < outputwidth; ++c) {
-					outbuf << cp437[frame[idx + c]];
+					outbuf << cp437[frame[idx + c].tile_index()];
 				}
 				idx += canvaswidth;
 			}
 			std::wstring out = outbuf.str();
-			sc.setbuf(out, outputrow, outputcol, outputwidth, outputheight);
+			sc.setbuf(frame, 0, 0, canvaswidth, canvasheight);
 		}
 	}
 	return 0;

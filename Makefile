@@ -1,6 +1,6 @@
 CXX=clang++
-CXXFLAGS=-O3 -Wall -Wextra -std=c++0x
+CXXFLAGS=-O3 -Wall -Wextra -std=c++0x -static
 all: patterntrainer compressor uncompress
 
 uncompress: uncompress.o ncurses.o
-	$(CXX) $(CXXFLAGS) -lncursesw -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lncursesw
