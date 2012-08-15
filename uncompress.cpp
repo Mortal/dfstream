@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <vector>
+#include "ncurses.h"
 
 int canvaswidth;
 int canvasheight;
@@ -44,6 +45,7 @@ inline void ensure(int & var, int min, int max) {
 }
 
 int main(int argc, char ** argv) {
+	ncurses sc;
 	int skip = 0;
 	if (argc >= 2) skip = atoi(argv[1]);
 
@@ -77,18 +79,17 @@ int main(int argc, char ** argv) {
 		}
 		if (!skipleft--) {
 			skipleft = skip;
-			std::stringstream outbuf;
+			std::wstringstream outbuf;
 			int idx = 0;
 			for (int r = 0; r < canvasheight; ++r) {
 				for (int c = 0; c < canvaswidth; ++c) {
 					outbuf << cp437[frame[idx++]];
 				}
-				outbuf << '\n';
+				outbuf << L'\n';
 			}
-			std::string out = outbuf.str();
-			const char * outc = out.c_str();
-			write(1, outc, out.size());
-			outbuf.str("");
+			std::wstring out = outbuf.str();
+			sc.setbuf(out);
+			outbuf.str(L"");
 		}
 	}
 	return 0;
