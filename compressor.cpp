@@ -1,4 +1,5 @@
 #include <cstring>
+#include <arpa/inet.h> // htonl
 #include <cstdio>
 #include <utility>
 #include <vector>
@@ -135,7 +136,11 @@ struct stdout_writer {
 			}
 		}
 		if (x1 >= x2 || y1 >= y2) {
-			printf("%d %d 0 0 0 0\n", canvaswidth, canvasheight);
+			const char * fmt = "%d %d 0 0 0 0\n";
+			const int len = snprintf(NULL, 0, fmt, canvaswidth, canvasheight);
+			uint32_t len_network = htonl(static_cast<uint32_t>(len));
+			fwrite(&len_network, sizeof(uint32_t), 1, stdout);
+			printf(fmt, canvaswidth, canvasheight);
 			std::swap(prev_output, output);
 			return;
 		}
@@ -143,10 +148,21 @@ struct stdout_writer {
 		const int outputrow = y1;
 		const int outputwidth = x2-x1;
 		const int outputheight = y2-y1;
-		printf("%d %d %d %d %d %d\n",
-			   canvaswidth, canvasheight,
-			   outputcol, outputrow,
-			   outputwidth, outputheight);
+		{
+			const char * fmt = "%d %d %d %d %d %d\n";
+			int len =
+				snprintf(NULL, 0, fmt,
+						 canvaswidth, canvasheight,
+						 outputcol, outputrow,
+						 outputwidth, outputheight);
+			len += sizeof(tile_type) * outputheight * outputwidth;
+			uint32_t len_network = htonl(static_cast<uint32_t>(len));
+			fwrite(&len_network, sizeof(uint32_t), 1, stdout);
+			printf(fmt,
+				   canvaswidth, canvasheight,
+				   outputcol, outputrow,
+				   outputwidth, outputheight);
+		}
 		if (outputcol == 0 && outputwidth == canvaswidth) {
 			fwrite(&output[outputrow*canvaswidth], sizeof(tile_type), outputheight*canvaswidth, stdout);
 		} else {

@@ -17,6 +17,8 @@ int outputheight;
 const int maxsize = 4096;
 
 inline bool readheader() {
+	if (!std::cin.ignore(4)) // ignore chunk size
+		return false;
 	if (!(std::cin >> canvaswidth >> canvasheight >> outputcol >> outputrow >> outputwidth >> outputheight))
 		return false;
 	std::string s;
