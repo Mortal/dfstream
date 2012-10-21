@@ -68,14 +68,14 @@ int main(int argc, char ** argv) {
 		ensure(outputwidth, 0, canvaswidth-outputcol);
 		ensure(outputheight, 0, canvasheight-outputrow);
 
-		std::vector<tile_type> input(canvaswidth*canvasheight);
-		std::cin.read(reinterpret_cast<char*>(&input[0]), sizeof(tile_type)*outputheight*outputwidth);
-
 		if (outputwidth == 0 || outputheight == 0) {
 			// do nothing!
 		} else if (outputcol == 0 && outputwidth == canvaswidth) {
-			std::copy(input.begin(), input.end(), frame.begin()+(outputrow*canvaswidth));
+			std::cin.read(reinterpret_cast<char*>(&*(frame.begin()+(outputrow*canvaswidth))),
+						  sizeof(tile_type)*outputheight*outputwidth);
 		} else {
+			std::vector<tile_type> input(outputwidth*outputheight);
+			std::cin.read(reinterpret_cast<char*>(&input[0]), sizeof(tile_type)*outputheight*outputwidth);
 			int inputidx = 0;
 			int idx = canvaswidth * outputrow + outputcol;
 			for (int r = 0; r < outputheight; ++r) {
