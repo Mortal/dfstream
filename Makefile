@@ -9,15 +9,15 @@ DEPS_uncompress := ncurses.o
 all: $(EXECS)
 
 clean:
-	$(RM) $(EXECS) $(OBJS)
+	$(RM) $(EXECS) $(OBJS) $(OBJS:.o=.d)
 
 $(EXECS): %: %.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS_$@)
 
 uncompress: ncurses.o
 
-compressor.o: compressor.cpp types.h dataequal.h
+%.d: %.cpp
+	$(SHELL) -ec '$(CXX) -MM $(CPPFLAGS) $< \
+		| sed "s/$*\\.o/& $@/g" > $@'
 
-ncurses.o: ncurses.cpp ncurses.h cp437.h types.h
-
-uncompress.o: uncompress.cpp ncurses.h types.h
+include $(OBJS:.o=.d)
