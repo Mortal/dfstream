@@ -1,8 +1,12 @@
 .*.swp
 /compressor
+/compressor.d
 /compressor.o
+/ncurses.d
 /ncurses.o
 /patterntrainer
+/patterntrainer.d
 /patterntrainer.o
 /uncompress
+/uncompress.d
 /uncompress.o
