@@ -16,6 +16,6 @@ uncompress: uncompress.o ncurses.o
 
 compressor.o: compressor.cpp types.h dataequal.h
 
-ncurses.o: ncurses.cpp ncurses.h cp437.h
+ncurses.o: ncurses.cpp ncurses.h cp437.h types.h
 
 uncompress.o: uncompress.cpp ncurses.h types.h
