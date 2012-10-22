@@ -4,7 +4,6 @@ EXECS := patterntrainer compressor uncompress
 OBJS := patterntrainer.o compressor.o uncompress.o ncurses.o
 
 LIBS_uncompress := -lncursesw
-DEPS_uncompress := ncurses.o
 
 all: $(EXECS)
 
