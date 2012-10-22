@@ -1,18 +1,20 @@
-CXX=clang++
-CXXFLAGS=-O3 -Wall -Wextra -std=c++0x -static
-all: patterntrainer compressor uncompress
+CXX := clang++
+CXXFLAGS := -O3 -Wall -Wextra -std=c++0x -static
+EXECS := patterntrainer compressor uncompress
+OBJS := patterntrainer.o compressor.o uncompress.o ncurses.o
+
+LIBS_uncompress := -lncursesw
+DEPS_uncompress := ncurses.o
+
+all: $(EXECS)
 
 clean:
-	$(RM) patterntrainer compressor uncompress uncompress.o ncurses.o compressor.o patterntrainer.o
+	$(RM) $(EXECS) $(OBJS)
 
-patterntrainer: patterntrainer.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(EXECS): %: %.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS_$@)
 
-compressor: compressor.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
-uncompress: uncompress.o ncurses.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lncursesw
+uncompress: ncurses.o
 
 compressor.o: compressor.cpp types.h dataequal.h
 
