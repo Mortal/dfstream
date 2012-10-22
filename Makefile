@@ -3,7 +3,7 @@ CXXFLAGS=-O3 -Wall -Wextra -std=c++0x -static
 all: patterntrainer compressor uncompress
 
 clean:
-	$(RM) patterntrainer compressor uncompress uncompress.o ncurses.o
+	$(RM) patterntrainer compressor uncompress uncompress.o ncurses.o compressor.o patterntrainer.o
 
 patterntrainer: patterntrainer.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
