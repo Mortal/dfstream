@@ -6,13 +6,21 @@
 #include <limits>
 #include <map>
 
-struct ncurses::impl {
+class ncurses::impl {
+public:
 	std::vector<int> pairusage;
 	std::map<int, short> colors;
 	std::vector<std::vector<short> > tilecolors;
 
 	impl() : pairusage(COLOR_PAIRS, 0) {
+		setlocale(LC_ALL, "");
+		initscr();
+		start_color();
 		pairusage.resize(COLOR_PAIRS, 0);
+	}
+
+	~impl() {
+		endwin();
 	}
 
 	short use_pair(int r, int c, int color) {
@@ -53,33 +61,33 @@ struct ncurses::impl {
 	void down(short pair) {
 		if (pairusage[pair]) --pairusage[pair];
 	}
+
+	void setbuf(const std::vector<tile_type> & buf, int row, int column, int width, int height) {
+		int off = 0;
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				color_type col = buf[off].color();
+				move(row+y, column+x);
+				attrset(((col & 0x8) ? A_BOLD : 0)
+						| COLOR_PAIR(use_pair(row+y, column+x, col & 0x77)));
+				addnwstr(cp437 + buf[off].tile_index(), 1);
+				++off;
+			}
+		}
+		refresh();
+	}
 };
 
-ncurses::ncurses() {
-	setlocale(LC_ALL, "");
-	initscr();
-	start_color();
-	pimpl = new ncurses::impl();
+ncurses::ncurses()
+	: pimpl(new ncurses::impl())
+{
 }
 
 ncurses::~ncurses() {
-	delete pimpl;
-	endwin();
 }
 
 void ncurses::setbuf(const std::vector<tile_type> & buf, int row, int column, int width, int height) {
-	int off = 0;
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			color_type col = buf[off].color();
-			move(row+y, column+x);
-			attrset(((col & 0x8) ? A_BOLD : 0)
-				   | COLOR_PAIR(pimpl->use_pair(row+y, column+x, col & 0x77)));
-			addnwstr(cp437 + buf[off].tile_index(), 1);
-			++off;
-		}
-	}
-	refresh();
+	pimpl->setbuf(buf, row, column, width, height);
 }
 
 // vim:set ts=4 sts=4 sw=4 noet:
