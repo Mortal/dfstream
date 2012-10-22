@@ -1,3 +1,14 @@
+Dependencies
+============
+
+* GNU/Linux
+* A recent C++ compiler with C++11 support (clang specified in Makefile).
+* Python2 with Twisted for the stream multiplexer
+* Ncurses built with wide character support (ncursesw)
+
+Usage
+=====
+
 The starting point is Dwarf Fortress, a multiplatform game that in particular
 runs in GNU/Linux under X11. Its graphical interface is grid and tile based;
 each tile is 8 pixels wide and 12 pixels tall and uses a particular foreground
