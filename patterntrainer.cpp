@@ -46,10 +46,9 @@ void build_decision_tree(oclist::iterator a,
 	size_t bestdistance = -1;
 	size_t bestindex = 0;
 	for (size_t index = 0; index < linelength; ++index) {
-		partition(a, b, oclist_partition(index));
+		auto c = partition(a, b, oclist_partition(index));
 		size_t unset = 0;
-		for (auto i = a; i != b; ++i) {
-			if (i->first[index]) break;
+		for (auto i = a; i != c; ++i) {
 			unset += i->second;
 		}
 		size_t distance = ((unset+unset) > totaloccurrences) ? ((unset+unset)-totaloccurrences) : (totaloccurrences-(unset+unset));
@@ -59,13 +58,10 @@ void build_decision_tree(oclist::iterator a,
 			if (0 == distance) break;
 		}
 	}
-	partition(a, b, oclist_partition(bestindex));
+	auto c = partition(a, b, oclist_partition(bestindex));
 	size_t unset = 0;
-	auto c = a;
-	while (c != b) {
-		if (c->first[bestindex]) break;
-		unset += c->second;
-		++c;
+	for (auto i = a; i != c; ++i) {
+		unset += i->second;
 	}
 	cout << "if (!input[" << bestindex << "]) {\n// " << unset << " out of " << totaloccurrences << '\n';
 	build_decision_tree(a, c, unset, lineids);
