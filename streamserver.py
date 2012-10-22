@@ -7,21 +7,30 @@ import struct
 
 class DorfClient(Protocol):
     def connectionMade(self):
-        self.factory.clients += (self,)
+        self.factory.clientcount = self.factory.clientcount + 1
+        self.clientid = self.factory.clientcount
+        print "Got connection",str(self.clientid),"from",str(self.transport.getPeer())
+        self.factory.clients[self.clientid] = self
         self.transport.write(self.factory.get_initial_message())
+
+    def connectionLost(self, reason):
+        print "Lost connection",str(self.clientid)
+        print "Reason:",str(reason)
+        del self.factory.clients[self.clientid]
 
 class DorfClientFactory(Factory):
     protocol = DorfClient
 
     def __init__(self):
-        self.clients = ()
+        self.clientcount = 0
+        self.clients = {}
         self.canvaswidth = 0
         self.canvasheight = 0
         self.frame = None
 
     def forward(self, string):
         string = struct.pack(DorfServer.structFormat, len(string))+string
-        for c in self.clients:
+        for c in self.clients.itervalues():
             c.transport.write(string)
 
     def get_initial_message(self):
@@ -47,6 +56,13 @@ class DorfServer(IntNStringReceiver):
 
     def __init__(self, clients):
         self.clients = clients
+
+    def connectionMade(self):
+        print "Got server connection from",str(self.transport.getPeer())
+
+    def connectionLost(self, reason):
+        print "Lost server connection",str(self.transport.getPeer())
+        print "Reason:",str(reason)
 
     def ensure(self, label, var, least, most):
         if var < least or var > most:
@@ -82,7 +98,7 @@ class DorfServer(IntNStringReceiver):
             inputidx = inputtill
             y = y + 1
 
-        clients.forward(string)
+        self.clients.forward(string)
 
 class DorfServerFactory(Factory):
     def __init__(self, clients):
