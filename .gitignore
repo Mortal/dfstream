@@ -1,0 +1,8 @@
+.*.swp
+/compressor
+/compressor.o
+/ncurses.o
+/patterntrainer
+/patterntrainer.o
+/uncompress
+/uncompress.o
