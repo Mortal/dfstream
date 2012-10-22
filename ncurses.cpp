@@ -23,7 +23,7 @@ public:
 		endwin();
 	}
 
-	short use_pair(int r, int c, int color) {
+	short use_pair(size_t r, size_t c, int color) {
 		if (tilecolors.size() <= r) tilecolors.resize(r+1);
 		if (tilecolors[r].size() <= c) tilecolors[r].resize(c+1);
 		if (tilecolors[r][c]) down(tilecolors[r][c]);
@@ -43,7 +43,7 @@ public:
 	short alloc_pair(int color) {
 		int least = std::numeric_limits<int>::max();
 		short leastp = 0;
-		for (short i = 1; i < pairusage.size(); ++i) {
+		for (short i = 1; static_cast<size_t>(i) < pairusage.size(); ++i) {
 			if (pairusage[i] <= least) {
 				least = pairusage[i];
 				leastp = i;
