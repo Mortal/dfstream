@@ -1,4 +1,3 @@
-#include "cp437.h"
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
@@ -88,15 +87,6 @@ int main(int argc, char ** argv) {
 		}
 		if (!skipleft--) {
 			skipleft = skip;
-			std::wstringstream outbuf;
-			int idx = canvaswidth*outputrow + outputcol;
-			for (int r = 0; r < outputheight; ++r) {
-				for (int c = 0; c < outputwidth; ++c) {
-					outbuf << cp437[frame[idx + c].tile_index()];
-				}
-				idx += canvaswidth;
-			}
-			std::wstring out = outbuf.str();
 			sc.setbuf(frame, 0, 0, canvaswidth, canvasheight);
 		}
 	}
