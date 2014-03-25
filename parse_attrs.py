@@ -2,24 +2,26 @@ import sys
 import os
 import re
 import subprocess
+import struct
+import numpy as np
 
-cp437 = \
-        " ☺☻♥♦♣♠•◘○◙♂♀♪♫☼"
-        "►◄↕‼¶§▬↨↑↓→←∟↔▲▼"
-        " !\"#$%&'()*+,-./"
-        "0123456789:;<=>?"
-        "@ABCDEFGHIJKLMNO"
-        "PQRSTUVWXYZ[\\]^_"
-        "`abcdefghijklmno"
-        "pqrstuvwxyz{|}~⌂"
-        "ÇüéâäàåçêëèïîìÄÅ"
-        "ÉæÆôöòûùÿÖÜ¢£¥₧ƒ"
-        "áíóúñÑªº¿⌐¬½¼¡«»"
-        "░▒▓│┤╡╢╖╕╣║╗╝╜╛┐"
-        "└┴┬├─┼╞╟╚╔╩╦╠═╬╧"
-        "╨╤╥╙╘╒╓╫╪┘┌█▄▌▌▄"
-        "αßΓπΣσµτΦΘΩδ∞φε∩"
-        "≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ "
+cp437 = (
+    " ☺☻♥♦♣♠•◘○◙♂♀♪♫☼"
+    "►◄↕‼¶§▬↨↑↓→←∟↔▲▼"
+    " !\"#$%&'()*+,-./"
+    "0123456789:;<=>?"
+    "@ABCDEFGHIJKLMNO"
+    "PQRSTUVWXYZ[\\]^_"
+    "`abcdefghijklmno"
+    "pqrstuvwxyz{|}~⌂"
+    "ÇüéâäàåçêëèïîìÄÅ"
+    "ÉæÆôöòûùÿÖÜ¢£¥₧ƒ"
+    "áíóúñÑªº¿⌐¬½¼¡«»"
+    "░▒▓│┤╡╢╖╕╣║╗╝╜╛┐"
+    "└┴┬├─┼╞╟╚╔╩╦╠═╬╧"
+    "╨╤╥╙╘╒╓╫╪┘┌█▄▌▌▄"
+    "αßΓπΣσµτΦΘΩδ∞φε∩"
+    "≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ")
 
 def get_wininfo():
     print("Running xwininfo...")
@@ -41,6 +43,7 @@ def get_wininfo():
 def get_ffmpeg_x11grab_command(wininfo, options=()):
     x, y, w, h = wininfo
     return ('ffmpeg',
+            '-r', '1',
             '-v', 'error',
             '-f', 'x11grab',
             '-s', '%sx%s' % (w, h),
@@ -55,9 +58,11 @@ def fetch_frames(wininfo):
     ffmpeg = subprocess.Popen(get_ffmpeg_x11grab_command(wininfo),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE)
+
     compressor = subprocess.Popen(('./compressor',),
             stdin=ffmpeg.stdout,
             stdout=subprocess.PIPE)
+
     def frames():
         def sized_read(n):
             b = compressor.stdout.read(n)
@@ -68,18 +73,24 @@ def fetch_frames(wininfo):
 
         def unpack(fmt):
             sz = struct.calcsize(fmt)
-            return struct.unpack(fmt, sized_read(sz))
+            b = sized_read(sz)
+            return struct.unpack(fmt, b)
 
         current_frame = None
 
         while True:
             s_len, = unpack('!I')
-            s = sized_read(s_len).decode()
+            s = sized_read(s_len)
+            nl = s.find(b'\n')
             canvaswidth, canvasheight, outputcol, \
                 outputrow, outputwidth, outputheight = \
-                map(int, s.split())
+                map(int, s[:nl].decode().split())
+            s = s[nl+1:]
+            if len(s) != outputwidth*outputheight*2:
+                raise IOError("Expected length %d, got %d"
+                        % (outputwidth*outputheight, len(s)))
 
-            grid = (np.array(sized_read(outputwidth*outputheight), np.uint8)
+            grid = (np.array(list(s), np.uint8)
                     .reshape((outputheight, outputwidth, 2)))
 
             if current_frame is None:
@@ -123,10 +134,8 @@ def fetch_frame(wininfo):
 
     return stdoutdata.decode('utf_16_le')
 
-def main():
-    wininfo = get_wininfo()
-
-    lines = fetch_frame(wininfo).splitlines()
+def parse_dwarf_attribute(frame):
+    lines = frame.splitlines()
     print(lines)
 
     name_match = re.search(r'  (\w.*), "(.*)", .*', lines[0])
@@ -152,6 +161,133 @@ def main():
                 vdesc = each
                 break
         print("%s: %s %s" % (title, vdesc, value))
+
+def dfdecode(b):
+    return ''.join(cp437[c] for c in b)
+
+def test_divider(frame, x):
+    column = frame[1:-1, x, :]
+    chars = column[:, 0]
+    colors = column[:, 1]
+    if np.count_nonzero(chars) != 0:
+        return False
+    if np.count_nonzero(colors & 0xF0 != 0x70) != 0:
+        return False
+    return True
+
+def interpret_first_row(first_row):
+    text = first_row[:,0]
+    colors = first_row[:,1]
+    bgcolors = colors & 0xF0
+
+    title_index = (bgcolors == 0x80)
+    paused_index = (bgcolors == 0x20)
+    fps_index = (bgcolors == 0x60)
+    idlers_index = (bgcolors == 0x30)
+
+    title = dfdecode(text[title_index]).strip()
+    paused = dfdecode(text[paused_index]).strip()
+    fps = dfdecode(text[fps_index]).strip()
+    idlers = dfdecode(text[idlers_index]).strip()
+
+    paused = paused == '*PAUSED*'
+
+    if fps:
+        s, n1, n2 = fps.split()
+        if s == 'FPS:':
+            fps = int(n1)
+        else:
+            raise Exception("FPS string is [%s]" % s)
+    else:
+        fps = None
+
+    if idlers:
+        s, n = idlers.split()
+        if s == 'Idlers:':
+            idlers = int(n)
+        else:
+            raise Exception("Idlers string is [%s]" % s)
+    else:
+        idlers = None
+
+    return title, paused, fps, idlers
+
+def interpret_frame(frame):
+    title, paused, fps, idlers = interpret_first_row(frame[0,:,:])
+    o = {
+        'title': title,
+        'paused': paused,
+        'fps': fps,
+        'idlers': idlers,
+        'window': None,
+        'z': None,
+    }
+
+    z_str = dfdecode(frame[-5:-1,-1,0]).strip()
+
+    if title == 'Dwarf Fortress' and z_str != '':
+        z = int(z_str)
+        divider, *_ = tuple(filter(lambda d: test_divider(frame, d),
+                (-56, -32, -25))) or (-1,)
+        window = frame[1:-1, 1:divider, :]
+        o['window'] = window
+        o['z'] = z
+
+    return o
+
+def correlate_slices(n, m):
+    if n > m:
+        for s1, s2 in correlate_slices(m, n):
+            yield s2, s1
+        return
+    # n <= m
+    for i in range(1, n):
+        yield i - 1, slice(n - i, n), slice(0, i)
+    for i in range(n, m):
+        yield i - 1, slice(0, n), slice(i, i + n)
+    for i in range(0, n - 1):
+        yield i - 1 + m, slice(0, n - i), slice(m - n + i, m)
+
+def correlate2d(a, b):
+    r1, c1 = a.shape
+    r2, c2 = b.shape
+    res = np.zeros((r1+r2, c1+c2), dtype=np.uint32)
+    for i, i1, i2 in correlate_slices(r1, r2):
+        for j, j1, j2 in correlate_slices(c1, c2):
+            eq = a[i1, j1] == b[i2, j2]
+            #if i == r1 - 1 and j == c1 - 1:
+            #    print('\n'.join(''.join(map(str,map(int,row))) for row in eq))
+            res[i, j] = np.count_nonzero(eq)
+    return res
+
+def recorrelate(prev, cur):
+    a = prev.reshape(-1).view(np.uint16).reshape(*prev.shape[0:2])
+    b = cur.reshape(-1).view(np.uint16).reshape(*cur.shape[0:2])
+    c = correlate2d(a, b)
+    #print(c)
+    best = np.unravel_index(c.argmax(), c.shape)
+    #print(best)
+    print(best[0] - a.shape[0] + 1, best[1] - a.shape[1] + 1)
+    print(c[best])
+    return np.array(cur)
+
+def main():
+    wininfo = get_wininfo()
+
+    #parse_dwarf_attribute(fetch_frame(wininfo))
+
+    ffmpeg, compressor, frames = fetch_frames(wininfo)
+    levels = {}
+    for frame in frames():
+        data = interpret_frame(frame)
+        window, z = data['window'], data['z']
+        if window is not None:
+            if z in levels:
+                levels[z] = recorrelate(levels[z], window)
+            else:
+                levels[z] = np.array(window)
+            #for r in data['window'][:,:,0]:
+            #    print(dfdecode(r))
 
 ###############################################################################
 # Dwarven body attributes

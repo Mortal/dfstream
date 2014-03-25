@@ -251,6 +251,7 @@ color_type stdin_reader<1>::decode_fg_color(const pixel_type<1> &) {
 template <>
 color_type stdin_reader<3>::decode_bg_color(const pixel_type<3> & c) {
 	if (!c[0] && !c[1] && !c[2]) return 0; // black
+	if (c[0] == 192 && c[1] == 192 && c[2] == 192) return 0x80;
 	if (c[0] == c[1] && c[1] == c[2]) return 0x70; // gray
 	color_type l = (c[0] == 255 || c[1] == 255 || c[2] == 255) ? 0x80 : 0;
 	color_type b = c[2] ? 0x40 : 0;

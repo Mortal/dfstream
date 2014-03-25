@@ -1,9 +1,9 @@
 CXX := clang++
 CXXFLAGS := -O3 -Wall -Wextra -std=c++0x -static
 EXECS := patterntrainer compressor uncompress
-OBJS := patterntrainer.o compressor.o uncompress.o ncurses.o
+OBJS := patterntrainer.o compressor.o uncompress.o ncurses_simple.o
 
-LIBS_uncompress := -lncursesw
+LIBS_uncompress :=
 
 all: $(EXECS)
 
@@ -13,7 +13,7 @@ clean:
 $(EXECS): %: %.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS_$@)
 
-uncompress: ncurses.o
+uncompress: ncurses_simple.o
 
 %.d: %.cpp
 	$(SHELL) -ec '$(CXX) -MM $(CPPFLAGS) $< \
